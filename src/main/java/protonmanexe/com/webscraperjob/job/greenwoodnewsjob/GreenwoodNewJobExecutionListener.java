@@ -96,8 +96,53 @@ public class GreenwoodNewJobExecutionListener implements JobExecutionListener {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void afterJob(JobExecution jobExecutionListener) {
+        // 1) Initialise variables
+        TelegramBot bot = null;
+        Long fullChatId = null;
+        List<GreenwoodNewsArticle> nonOutdatedNews = 
+            (List<GreenwoodNewsArticle>) jobExecutionListener.getExecutionContext().get(
+                UPDATED_GREENWOOD_NEWS_LIST);
+
+        try {
+        // 2) Create Telegram bot and chat id
+            bot = new TelegramBot(botToken);
+            fullChatId = -Long.valueOf(chatId);
+        } catch (NumberFormatException e) {
+            log.error("Error sending message, error {}", e.toString());
+        }
+
+        // 4) Send no greenwood news msg if updated news list has no more news
+        if (nonOutdatedNews == null || nonOutdatedNews.isEmpty()) {
+            String msg = generalUtils.generateTimeInHourPmAm()
+            .concat(GREENWOOD_NEW_BULLETIN)
+            .concat(" - ")
+            .concat(NO_GREENWOOD_NEWS);
+            log.info("Msg: {}", msg);
+            TeleMsgSvc.sendTelegramMessage(bot, msg, fullChatId);
+        } else {
+        // 5) Send greenwood news msg template if updated news list still has news
+            String bulletinMsg = generalUtils.generateTimeInHourPmAm().toLowerCase()
+                .concat(GREENWOOD_NEW_BULLETIN);
+            TeleMsgSvc.sendTelegramMessage(bot, bulletinMsg, fullChatId);
+
+            for (GreenwoodNewsArticle article : nonOutdatedNews) {
+                log.info("Article: {}", article.toString());
+
+                String msg = ("Headline: ")
+                    .concat(article.getHeadlines())
+                    .concat(System.lineSeparator())
+                    .concat("Date: ")
+                    .concat(article.getDate())
+                    .concat(System.lineSeparator())
+                    .concat("Link: ")
+                    .concat(article.getUrl());
+                TeleMsgSvc.sendTelegramMessage(bot, msg, fullChatId);
+            }
+        }
+
         log.info("Job ended with {} at {}", 
             jobExecutionListener.getStatus(), jobExecutionListener.getEndTime());
     }

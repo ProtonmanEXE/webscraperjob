@@ -92,6 +92,7 @@ public class GreenwoodNewsService {
                 date = element.selectFirst("time").text();
             }
         }
+        log.info("Date for {} is {}", url, date);
         return date;
     }
 
